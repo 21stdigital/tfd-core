@@ -13,8 +13,6 @@ if (!defined('WPINC')) {
     die;
 }
 
-require_once dirname(__FILE__).'/vendor/extended-cpts/extended-cpts.php';
-
 require_once dirname(__FILE__).'/debug/_main.php';
 
 require_once dirname(__FILE__).'/main/_main.php';
