@@ -4,7 +4,7 @@ namespace TFD;
 
 use TFD\Media_Sources as Sources;
 
-require_once dirname(__FILE__).'/media_queries.php';
+require_once dirname(__FILE__) . '/media_queries.php';
 
 class Image
 {
@@ -28,19 +28,22 @@ class Image
     }
 
 
-    public static function get_image_density_sizes($density, $name, $width, $height, $crop = true)
+    public static function get_density_sizes($density, $name, $width, $height, $crop = true)
     {
-        return array_map(function ($density_factor) {
-            return [
-                'name' => $name . '@' . $density_factor . 'x',
-                'width' => $width * $density_factor,
-                'height' => $height * $density_factor,
-                'crop' => $crop,
+        $res = [];
+        for ($i = 1; $i <= $density; ++$i) {
+            $res[] = [
+                $name . '@' . $i . 'x',
+                $width * $i,
+                $height * $i,
+                $crop,
             ];
-        }, range(1, $density));
+        }
+
+        return $res;
     }
 
-    public static function add_image_size($name, $width = 0, $height = 0, $crop = true)
+    public static function add_size($name, $width = 0, $height = 0, $crop = true)
     {
         if (function_exists('fly_add_image_size')) {
             fly_add_image_size($name, $width, $height, $crop);
@@ -86,11 +89,20 @@ class Image
 
     private static function get_attachment_fields($attachment_id = null, $size = '', $class = ['ResponsiveImage'])
     {
-        $attachment_id = isset($attachment_id) ? (int) $attachment_id : get_post_thumbnail_id();
+        $attachment_id = isset($attachment_id) ? (int)$attachment_id : get_post_thumbnail_id();
         $attachment = isset($attachment_id) ? get_post($attachment_id) : null;
 
         if (!isset($attachment) || $attachment->post_type != 'attachment') {
             return null;
+        }
+
+        $width = wp_get_attachment_image_src($attachment_id, $size)[1];
+        $height = wp_get_attachment_image_src($attachment_id, $size)[2];
+        $orienation = 'landscape';
+        if ($width < $height) {
+            $orienation = 'portrait';
+        } elseif ($width == $height) {
+            $orienation = 'square';
         }
 
         return [
@@ -101,12 +113,13 @@ class Image
             'src' => wp_get_attachment_image_src($attachment_id, $size)[0],
             'guid' => $attachment->guid,
             'title' => $attachment->post_title,
-            'width' => wp_get_attachment_image_src($attachment_id, $size)[1],
-            'height' => wp_get_attachment_image_src($attachment_id, $size)[2],
+            'width' => $width,
+            'height' => $height,
             'class' => $class ? implode(' ', $class) : 'Image',
             'caption_enabled' => true,
             'id' => $attachment->ID,
             'focal_point' => self::get_focal_point($attachment_id),
+            'orientation' => $orienation,
         ];
     }
 
@@ -124,12 +137,12 @@ class Image
         $x = isset($focal_point) && !empty($focal_point) ? $focal_point[0] : .5;
         $y = isset($focal_point) && !empty($focal_point) ? $focal_point[1] : .5;
 
-        return[
+        return [
             'x' => $x,
             'y' => $y,
-            'bg_pos' => $x * 100 .'% '.$y * 100 .'%',
-            'bg_pos_x' => $x * 100 .'%',
-            'bg_pos_y' => $y * 100 .'%',
+            'bg_pos' => $x * 100 . '% ' . $y * 100 . '%',
+            'bg_pos_x' => $x * 100 . '%',
+            'bg_pos_y' => $y * 100 . '%',
         ];
     }
 
@@ -148,7 +161,7 @@ class Image
 
             foreach ($media_sources as $key => $media_source) {
                 if ($key == 'default') {
-                    $image_data = self::get_attachment_image_src($attachment_id, $size.'_default');
+                    $image_data = self::get_attachment_image_src($attachment_id, $size . '_default');
                     if ($image_data && is_array($image_data) && count($image_data) && array_key_exists('src', $image_data)) {
                         $image['src'] = $image_data['src'];
                         $image['width'] = $image_data['width'];
@@ -160,19 +173,19 @@ class Image
 
                     $lastElement = end($media_source['src']);
                     foreach ($media_source['src'] as $srcset_postfix => $density) {
-                        $image_data = self::get_attachment_image_src($attachment_id, $size.'_'.$srcset_postfix);
+                        $image_data = self::get_attachment_image_src($attachment_id, $size . '_' . $srcset_postfix);
 
                         if (isset($image_data) && count($image_data) && array_key_exists('src', $image_data)) {
-                            $srcset .= $image_data['src'].' '.$density;
+                            $srcset .= $image_data['src'] . ' ' . $density;
                             $srcset .= ($lastElement === $density) ? '' : ', ';
                         }
                     }
 
                     if ($srcset) {
                         $sources[] = array(
-                        'srcset' => $srcset,
-                        'media' => $media_query,
-                    );
+                            'srcset' => $srcset,
+                            'media' => $media_query,
+                        );
                     }
                 }
 
