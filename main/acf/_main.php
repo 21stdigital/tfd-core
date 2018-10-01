@@ -14,17 +14,17 @@ class ACF
         $prefix = preg_replace('/_$/', '', $prefix);
 
         if (!empty($key)) {
-            $key = $key.'_';
+            $key = $key . '_';
             if (isset($index)) {
-                $key = $key.$index.'_';
+                $key = $key . $index . '_';
             }
         }
 
         if (!empty($prefix)) {
-            $prefix = $prefix.'_';
+            $prefix = $prefix . '_';
         }
 
-        return $key.$prefix;
+        return $key . $prefix;
     }
 
     public static function get_prefix($key = null, $prefix = null)
@@ -37,16 +37,16 @@ class ACF
         if (!post_password_required()) {
             $prefix = self::prefix($prefix);
             if ($prefix) {
-                $prefix = $prefix.'_';
+                $prefix = $prefix . '_';
             }
 
-            $id = $id ?: get_the_id();
+            $id = $id ? : get_the_id();
 
             if ($id === 'option') {
-                $prefix = 'options_'.$prefix;
-                $value = get_option($prefix.$field);
+                $prefix = 'options_' . $prefix;
+                $value = get_option($prefix . $field);
             } else {
-                $value = get_post_meta($id, $prefix.$field, true);
+                $value = get_post_meta($id, $prefix . $field, true);
             }
 
             return $value;
@@ -82,15 +82,15 @@ class ACF
     public static function get_value($field_key, $fields, $prefix = '')
     {
         if ($prefix && substr($prefix, -1) !== '_') {
-            $prefix = $prefix.'_';
+            $prefix = $prefix . '_';
         }
 
-        return array_key_exists($prefix.$field_key, $fields) ? $fields[$prefix.$field_key] : null;
+        return array_key_exists($prefix . $field_key, $fields) ? $fields[$prefix . $field_key] : null;
     }
 
     public static function get_fields($id = null)
     {
-        $id = $id ?: get_the_id();
+        $id = $id ? : get_the_id();
 
         $all_fields = get_post_meta($id);
         $fields = [];
@@ -112,12 +112,12 @@ class ACF
 
     public static function get_key_with_prefix($key, $prefix)
     {
-        return $prefix ? get_prefix(null, $prefix).$key : $key;
+        return $prefix ? get_prefix(null, $prefix) . $key : $key;
     }
 
     public static function get_repeater_args($key, $id = null)
     {
-        $id = $id ?: get_the_id();
+        $id = $id ? : get_the_id();
         $count = self::get_field($key, $id);
         if ($count) {
             for ($i = 0; $i < $count; ++$i) {

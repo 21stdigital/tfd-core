@@ -14,7 +14,7 @@ function email_url($email, $subject = null, $body = null)
     }
 
     $email = antispambot($email);
-    $email_link = 'mailto:'.$email;
+    $email_link = 'mailto:' . $email;
 
     $params = [];
     if ($subject) {
@@ -29,44 +29,44 @@ function email_url($email, $subject = null, $body = null)
         $index = 1;
         foreach ($params as $key => $value) {
             $query .= $index == 1 ? '?' : '&';
-            $query .= $key.'='.$value;
+            $query .= $key . '=' . $value;
             ++$index;
         }
     }
 
     if ($query) {
-        $email_link = $email_link.$query;
+        $email_link = $email_link . $query;
     }
 
     return esc_url($email_link, array('mailto'));
 }
 
-function email_link($email)
+function email_link($email, $class = '')
 {
     if (!is_email($email)) {
         return '';
     }
 
     $email = antispambot($email);
-    $email_link = 'mailto:'.$email;
+    $email_link = 'mailto:' . $email;
 
-    $res = '<a href="'.esc_url($email_link, array('mailto')).'" class="Email" itemprop="email">'.esc_html($email).'</a>';
+    $res = '<a href="' . esc_url($email_link, array('mailto')) . '" class="Email ' . $class . '" itemprop="email">' . esc_html($email) . '</a>';
 
     return $res;
 }
 
-function phone_link($phone)
+function phone_link($phone, $class = '')
 {
-    $phone_link = 'tel:'.str_replace('-', '', str_replace(' ', '', $phone));
+    $phone_link = 'tel:' . str_replace('-', '', str_replace(' ', '', $phone));
 
-    $res = '<a href="'.esc_url($phone_link, array('tel')).'" class="Phone" itemprop="telephone">'.esc_html($phone).'</a>';
+    $res = '<a href="' . esc_url($phone_link, array('tel')) . '" class="Phone ' . $class . '" itemprop="telephone">' . esc_html($phone) . '</a>';
 
     return $res;
 }
 
 function google_map_url($map)
 {
-    return 'https://www.google.com/maps/search/?api=1&query='.urlencode($map['address']);
+    return 'https://www.google.com/maps/search/?api=1&query=' . urlencode($map['address']);
 }
 
 function get_weekday_label($weekday)
@@ -118,7 +118,7 @@ function haversineGreatCircleDistance(
     $lonDelta = $lonTo - $lonFrom;
 
     $angle = 2 * asin(sqrt(pow(sin($latDelta / 2), 2) +
-      cos($latFrom) * cos($latTo) * pow(sin($lonDelta / 2), 2)));
+        cos($latFrom) * cos($latTo) * pow(sin($lonDelta / 2), 2)));
 
     return $angle * $earthRadius;
 }
