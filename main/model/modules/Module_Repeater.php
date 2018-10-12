@@ -1,34 +1,52 @@
 
 <?php
 
-class Module_Repeater extends TFD_Field_Group
+class ModuleRepeater extends TFD_Field_Group
 {
     public $attributes = [
+        'modules'
+    ];
+
+    public $virtual = [
         'items'
     ];
 
-
-
-    public static function fields($config = [])
+    public function _filterItems($items)
     {
-        $class_name = get_called_class();
+        $modules = $this->modules;
 
-        $defaults = [
-            'style' => 'seamless',
-        ];
+        $items = [];
+        foreach ($modules as $index => $module) {
+            $moduleClass = __NAMESPACE__ . '\\' . $module;
+            if (class_exists($moduleClass)) {
+                $prefix = Self::keyWithPrefix('modules', [$this->prefix, $index]);
+                $items[] = new $moduleClass($this->model, $prefix);
+            } else {
+                error_log('MODULE CLASS NOT EXISTS: ' . $moduleClass);
+            }
+        }
+        return $items;
+    }
 
-        $fields = new FieldsBuilder($class_name, array_merge($defaults, $config));
-        $fields
-            ->addFlexibleContent('modules')
-            ->addRepeater('items', [
-                'min' => 1,
-                'button_label' => esc_html__('Add Module', 'tfd'),
+    public static function fields($namespace = null)
+    {
+        $globalKey = Self::keyWithPrefix(Self::getKey(), $namespace);
+        $fieldsBuilder = self::fieldsBuilder();
+
+        $fieldsBuilder
+            ->addGroup($globalKey)
+
+            ->addFlexibleContent('modules', [
+                'button_label' => esc_html__('Add Content', 'tfd'),
                 'layout' => 'block',
             ])
             ->addLayout(Text::fields())
             ->addLayout(TextImage::fields())
-            ->endFlexibleContent();
 
-        return $fields;
+            ->endFlexibleContent()
+
+            ->endGroup();
+
+        return $fieldsBuilder;
     }
 }
