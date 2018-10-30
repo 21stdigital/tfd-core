@@ -2,6 +2,7 @@
 
 namespace TFD;
 
+use App;
 use TFD\Media_Sources as Sources;
 
 require_once dirname(__FILE__) . '/media_queries.php';
@@ -32,8 +33,9 @@ class Image
     {
         $res = [];
         for ($i = 1; $i <= $density; ++$i) {
+            $suffix = ($i > 1) ? '@' . $i . 'x' : '';
             $res[] = [
-                $name . '@' . $i . 'x',
+                $name . $suffix,
                 $width * $i,
                 $height * $i,
                 $crop,
@@ -59,13 +61,102 @@ class Image
                 self::add_size($size[0], $size[1], $size[2], $size[3]);
             }
         }
+
+    }
+
+
+    /**
+     * Get size information for all currently-registered image sizes.
+     *
+     * @global $_wp_additional_image_sizes
+     * @uses   get_intermediate_image_sizes()
+     * @return array $sizes Data for all currently-registered image sizes.
+     */
+    private static function get_image_sizes()
+    {
+        global $_wp_additional_image_sizes;
+
+        $sizes = array();
+
+        foreach (get_intermediate_image_sizes() as $_size) {
+            if (in_array($_size, array('thumbnail', 'medium', 'medium_large', 'large'))) {
+                $sizes[$_size]['width'] = get_option("{$_size}_size_w");
+                $sizes[$_size]['height'] = get_option("{$_size}_size_h");
+                $sizes[$_size]['crop'] = (bool)get_option("{$_size}_crop");
+            } elseif (isset($_wp_additional_image_sizes[$_size])) {
+                $sizes[$_size] = array(
+                    'width' => $_wp_additional_image_sizes[$_size]['width'],
+                    'height' => $_wp_additional_image_sizes[$_size]['height'],
+                    'crop' => $_wp_additional_image_sizes[$_size]['crop'],
+                );
+            }
+        }
+
+        return $sizes;
+    }
+
+    /**
+     * Get size information for a specific image size.
+     *
+     * @uses   get_image_sizes()
+     * @param  string $size The image size for which to retrieve data.
+     * @return bool|array $size Size data about an image size or false if the size doesn't exist.
+     */
+    private static function get_image_size($size)
+    {
+        $sizes = Self::get_image_sizes();
+
+        if (isset($sizes[$size])) {
+            return $sizes[$size];
+        }
+
+        return false;
+    }
+
+    /**
+     * Get the width of a specific image size.
+     *
+     * @uses   get_image_size()
+     * @param  string $size The image size for which to retrieve data.
+     * @return bool|string $size Width of an image size or false if the size doesn't exist.
+     */
+    private static function get_image_width($size)
+    {
+        if (!$size = Self::get_image_size($size)) {
+            return false;
+        }
+
+        if (isset($size['width'])) {
+            return $size['width'];
+        }
+
+        return false;
+    }
+
+    /**
+     * Get the height of a specific image size.
+     *
+     * @uses   get_image_size()
+     * @param  string $size The image size for which to retrieve data.
+     * @return bool|string $size Height of an image size or false if the size doesn't exist.
+     */
+    private static function get_image_height($size)
+    {
+        if (!$size = Self::get_image_size($size)) {
+            return false;
+        }
+
+        if (isset($size['height'])) {
+            return $size['height'];
+        }
+
+        return false;
     }
 
     private static function get_attachment_image_src($attachment_id, $size = 'thumbnail')
     {
         if (function_exists('fly_get_attachment_image_src')) {
             $image = fly_get_attachment_image_src($attachment_id, $size);
-
             if (isset($image) && !empty($image)) {
                 return [
                     'src' => $image['src'],
@@ -155,41 +246,84 @@ class Image
         }
         if ($size) {
             $media_sources = Sources\get_sources();
-
             $sources = array();
             $index = 0;
 
-            foreach ($media_sources as $key => $media_source) {
-                if ($key == 'default') {
-                    $image_data = self::get_attachment_image_src($attachment_id, $size . '_default');
-                    if ($image_data && is_array($image_data) && count($image_data) && array_key_exists('src', $image_data)) {
-                        $image['src'] = $image_data['src'];
-                        $image['width'] = $image_data['width'];
-                        $image['height'] = $image_data['height'];
+            $size_classes = App\sanatize_image_sizes();
+
+            $metadata = wp_get_attachment_metadata($attachment_id);
+
+            if (false && isset($metadata['cloudinary_data']) && isset($metadata['cloudinary_data']['public_id'])) {
+                foreach ($media_sources as $key => $media_source) {
+                    if ($key == 'default') {
+                        $image_size_class = $size . '_default';
+                        d_log($image_size_class);
+                        if (isset($size_classes[$image_size_class])) {
+                            $size_class = $size_classes[$image_size_class];
+
+                            $image['src'] = "https://res.cloudinary.com/tfd/image/upload/c_fill,g_auto,w_" . $size_class->width . ",h_" . $size_class->height . ",f_auto/v1540307228/" . $metadata['cloudinary_data']['public_id'];
+                            $image['width'] = $size_class->width;
+                            $image['height'] = $size_class->height;
+                        }
+                    } else {
+                        $media_query = $media_source['media'];
+                        $srcset = '';
+
+                        $lastElement = end($media_source['src']);
+                        foreach ($media_source['src'] as $srcset_postfix => $density) {
+                            $image_size_class = $size . '_' . $srcset_postfix;
+                            d_log($image_size_class);
+                            if (isset($size_classes[$image_size_class])) {
+                                $size_class = $size_classes[$image_size_class];
+                                if (isset($size_class)) {
+                                    $srcset .= "https://res.cloudinary.com/tfd/image/upload/c_fill,g_auto,w_" . $size_class->width . ",h_" . $size_class->height . ",f_auto/v1540307228/" . $metadata['cloudinary_data']['public_id'] . ' ' . $density;
+                                    $srcset .= ($lastElement === $density) ? '' : ', ';
+                                }
+                            }
+                        }
+
+                        if ($srcset) {
+                            $sources[] = array(
+                                'srcset' => $srcset,
+                                'media' => $media_query,
+                            );
+                        }
                     }
-                } else {
-                    $media_query = $media_source['media'];
-                    $srcset = '';
+                }
+                d_log($sources, 'SOURCES');
+            } else {
+                foreach ($media_sources as $key => $media_source) {
+                    if ($key == 'default') {
+                        $image_data = self::get_attachment_image_src($attachment_id, $size . '_default');
+                        if ($image_data && is_array($image_data) && count($image_data) && array_key_exists('src', $image_data)) {
+                            $image['src'] = $image_data['src'];
+                            $image['width'] = $image_data['width'];
+                            $image['height'] = $image_data['height'];
+                        }
+                    } else {
+                        $media_query = $media_source['media'];
+                        $srcset = '';
 
-                    $lastElement = end($media_source['src']);
-                    foreach ($media_source['src'] as $srcset_postfix => $density) {
-                        $image_data = self::get_attachment_image_src($attachment_id, $size . '_' . $srcset_postfix);
+                        $lastElement = end($media_source['src']);
+                        foreach ($media_source['src'] as $srcset_postfix => $density) {
+                            $image_data = self::get_attachment_image_src($attachment_id, $size . '_' . $srcset_postfix);
 
-                        if (isset($image_data) && count($image_data) && array_key_exists('src', $image_data)) {
-                            $srcset .= $image_data['src'] . ' ' . $density;
-                            $srcset .= ($lastElement === $density) ? '' : ', ';
+                            if (isset($image_data) && count($image_data) && array_key_exists('src', $image_data)) {
+                                $srcset .= $image_data['src'] . ' ' . $density;
+                                $srcset .= ($lastElement === $density) ? '' : ', ';
+                            }
+                        }
+
+                        if ($srcset) {
+                            $sources[] = array(
+                                'srcset' => $srcset,
+                                'media' => $media_query,
+                            );
                         }
                     }
 
-                    if ($srcset) {
-                        $sources[] = array(
-                            'srcset' => $srcset,
-                            'media' => $media_query,
-                        );
-                    }
+                    ++$index;
                 }
-
-                ++$index;
             }
 
             $image['sources'] = $sources;
