@@ -25,13 +25,13 @@ class Transient
 
     private static function make_key($key)
     {
-        return 'TFD_'.$key;
+        return 'TFD_' . $key;
     }
 
     public static function get_value($key, $func, $expiration = null)
     {
         $key = self::make_key($key);
-        $expiration = $expiration ?: self::get_expiration();
+        $expiration = $expiration ? : self::get_expiration();
         // get the transient
         $value = self::is_active() ? get_transient($key) : null;
 
@@ -46,7 +46,7 @@ class Transient
     public static function get_buffered_value($key, $func, $expiration = null)
     {
         $key = self::make_key($key);
-        $expiration = $expiration ?: self::get_expiration();
+        $expiration = $expiration ? : self::get_expiration();
         // get the transient
         $value = self::is_active() ? get_transient($key) : null;
 
@@ -68,7 +68,7 @@ class Transient
 
     public static function add_key($key, $stack)
     {
-        $keys = get_transient($stack) ?: array();
+        $keys = get_transient($stack) ? : array();
         $keys = is_array($keys) ? $keys : array();
         if (!in_array($key, $keys)) {
             $keys[] = $key;

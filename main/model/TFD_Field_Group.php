@@ -304,7 +304,7 @@ abstract class TFD_Field_Group implements JsonSerializable
         } else if ($attribute === 'key') {
             return Self::getKey();
         } else if ($attribute === 'prefix') {
-            return $this->prefix
+            return $this->prefix;
         }
     }
 
@@ -382,7 +382,7 @@ abstract class TFD_Field_Group implements JsonSerializable
 
         $repeater = [];
         for ($i = 0; $i < $count; $i++) {
-            $repeater[] = $call()
+            $repeater[] = $call();
         }
         return $repeater;
     }

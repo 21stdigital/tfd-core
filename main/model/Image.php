@@ -30,8 +30,15 @@ class Image extends TFD_Model
     {
         parent::__construct($insert);
 
-        $this->image_src = wp_get_attachment_image_src($this->ID, ' full ');
-        $this->focal_point = $this->focal_point();
+    }
+
+    protected function boot()
+    {
+        if (!empty($this->ID)) {
+            $this->image_src = wp_get_attachment_image_src($this->ID, ' full ');
+            $this->focal_point = $this->get_focal_point();
+        }
+        parent::boot();
     }
 
     public function _getAlt()
